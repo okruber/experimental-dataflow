@@ -1,0 +1,42 @@
+name: Cloud Build and Flex Template Deploy
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - id: auth
+      name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ secrets.SERVICE_ACCOUNT }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Kaniko settings
+      run: |
+        gcloud config set builds/use_kaniko True
+        gcloud config set builds/kaniko_cache_ttl 480
+
+    - name: Submit build to Cloud Build
+      run: |
+        gcloud builds submit --tag europe-north1-docker.pkg.dev/olle-kruber-project/solita-beam-template/solita-beam-template:0.1.0 .
+
+    - name: Build and upload Flex Template
+      run: |
+        gcloud dataflow flex-template build gs://totemic-dataflow-templates/templates/0.1.0/solita-beam-template.json \
+          --image europe-north1-docker.pkg.dev/olle-kruber-project/solita-beam-template/solita-beam-template:0.1.0 \
+          --sdk-language PYTHON \
+          --metadata-file solita-beam-template-metadata 

@@ -7,4 +7,16 @@
   --region europe-north1 \
   --temp_location gs://totemic-dataflow-temp
 
-###
+### Prep for Flex-templates:
+
+gcloud compute networks subnets update default \
+	--region=europe-north1 \
+	--enable-private-ip-google-access
+##
+
+gcloud artifacts repositories create solita-dataflow-image \
+    --repository-format=docker \
+    --location=europe-north1 \
+    --async
+
+### 
