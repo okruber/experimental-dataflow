@@ -1,0 +1,10 @@
+### To run in OG-mode:
+    python pipeline/main.py \
+  --input_path gs://totemic-bucket-raw/important_file_20250220.txt \
+  --output_path gs://totemic-bucket-trusted/important_file_20250220.txt \
+  --runner DataflowRunner \
+  --project olle-kruber-project \
+  --region europe-north1 \
+  --temp_location gs://totemic-dataflow-temp
+
+###
