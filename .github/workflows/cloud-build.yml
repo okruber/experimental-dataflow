@@ -1,8 +1,11 @@
 name: Cloud Build and Flex Template Deploy
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   build-and-deploy:
