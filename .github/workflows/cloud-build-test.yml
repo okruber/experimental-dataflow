@@ -40,7 +40,7 @@ jobs:
 
     - name: Submit build to Cloud Build
       run: |
-        gcloud builds submit --tag europe-north1-docker.pkg.dev/olle-kruber-project/solita-beam-demo/solita-beam-demo:0.1.0 . || true
+        gcloud builds submit --tag europe-north1-docker.pkg.dev/olle-kruber-project/solita-beam-demo/solita-beam-demo:0.1.0 . --suppress-logs
 
     - name: Build and upload Flex Template
       run: |
