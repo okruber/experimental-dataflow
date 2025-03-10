@@ -47,4 +47,4 @@ jobs:
         gcloud dataflow flex-template build gs://totemic-dataflow-templates/templates/0.1.0/solita-beam-demo.json \
           --image europe-north1-docker.pkg.dev/olle-kruber-project/solita-beam-demo/solita-beam-demo:0.1.0 \
           --sdk-language PYTHON \
-          --metadata-file solita-beam-demo-metadata 
+          --metadata-file solita-beam-demo-metadata.json 
