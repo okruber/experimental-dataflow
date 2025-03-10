@@ -1,0 +1,27 @@
+{
+    "description": "Solita Beam Demo",
+    "name": "Solita-Beam-Demo",
+    "parameters": [
+        {
+            "name": "input",
+            "label": "GCS folder to read Files from",
+            "helpText": "GCS folder to read Files from. e.g. gs://<mybucket>/input",
+            "regexes": [
+                "^gs:\\/\\/[^\\n\\r]+$"
+            ],
+            "paramType": "GCS_READ_FOLDER",
+            "isOptional": false
+        },
+        {
+            "name": "output",
+            "label": "GCS folder to write Files to",
+            "helpText": "GCS folder to write Files to. e.g. gs://<mybucket>",
+            "regexes": [
+            "^gs:\\/\\/[^\\n\\r]+$"
+            ],
+            "paramType": "GCS_WRITE_FOLDER",
+            "isOptional": false
+        }
+    ]
+  }
+  
