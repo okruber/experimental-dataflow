@@ -1,7 +1,7 @@
 *
 !*.py
-!beam_flex_demo
-!beam-flex-demo-metadata
+!pipeline/
+!solita-beam-demo-metadata
 !tests
 !pyproject.toml
 !setup.py
