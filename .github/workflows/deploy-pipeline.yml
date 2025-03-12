@@ -100,10 +100,11 @@ jobs:
             continue
           fi
           
-          # Build and push the Docker image with pipeline module as build arg
+          # Build and push the Docker image using cloudbuild.yaml
           echo "Building Docker image for $PIPELINE_NAME..."
           gcloud builds submit \
-            --tag europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipelines/$PIPELINE_NAME:latest \
+            --config cloudbuild.yaml \
+            --substitutions=_PIPELINE_NAME=$PIPELINE_NAME,_PIPELINE_MODULE=$PIPELINE_NAME .
           
           # Build and upload Flex Template
           echo "Creating Flex Template for $PIPELINE_NAME..."

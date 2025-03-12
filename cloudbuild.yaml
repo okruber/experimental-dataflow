@@ -1,0 +1,6 @@
+steps:
+  - name: 'gcr.io/kaniko-project/executor:latest'
+    args:
+      - '--destination=europe-north1-docker.pkg.dev/${PROJECT_ID}/dataflow-pipelines/${_PIPELINE_NAME}:latest'
+      - '--cache=true'
+      - '--build-arg=PIPELINE_MODULE=${_PIPELINE_MODULE}'
