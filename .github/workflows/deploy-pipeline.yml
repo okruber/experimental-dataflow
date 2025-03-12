@@ -1,0 +1,120 @@
+name: Deploy Dataflow Flex Template [TEST]
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      pipeline_name:
+        description: 'Name of the pipeline to deploy (e.g., text-transform)'
+        required: true
+
+jobs:
+  detect-and-deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # To be able to diff with the previous commit
+
+    # Determine which pipelines changed
+    - name: Detect changed pipelines
+      id: detect-changes
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          # Use input values if manually triggered
+          echo "CHANGED_PIPELINES=${{ github.event.inputs.pipeline_name }}" >> $GITHUB_ENV
+          echo "Manual deployment of pipeline: ${{ github.event.inputs.pipeline_name }}"
+        else
+          # For push/PR events, detect changed pipeline folders
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For PRs, compare against the base branch
+            git fetch origin ${{ github.base_ref }} --depth=1
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} ${{ github.sha }})
+          else
+            # For pushes, compare against the previous commit
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          fi
+          
+          # Extract unique pipeline directories that changed
+          PIPELINE_CHANGES=$(echo "$CHANGED_FILES" | grep -o "pipelines/[^/]*" | sort | uniq || echo "")
+          
+          if [ -z "$PIPELINE_CHANGES" ]; then
+            echo "No pipeline changes detected. Skipping deployment."
+            echo "SKIP_DEPLOYMENT=true" >> $GITHUB_ENV
+          else
+            # Extract pipeline names from directory paths
+            PIPELINE_NAMES=$(echo "$PIPELINE_CHANGES" | sed 's/pipelines\///' | tr '\n' ' ')
+            echo "Changes detected in pipelines: $PIPELINE_NAMES"
+            echo "CHANGED_PIPELINES=$PIPELINE_NAMES" >> $GITHUB_ENV
+          fi
+        fi
+    
+    # Skip the rest of the workflow if no pipelines changed
+    - name: Check if deployment should be skipped
+      id: check-skip
+      run: |
+        if [ "${SKIP_DEPLOYMENT:-false}" == "true" ]; then
+          echo "No pipeline changes detected. Workflow will exit."
+          exit 78  # Neutral exit code to skip the workflow
+        fi
+
+    - id: auth
+      name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        create_credentials_file: true
+        token_format: 'access_token'
+        workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ secrets.DATAFLOW_SERVICE_ACCOUNT }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Kaniko settings
+      run: |
+        gcloud config set builds/use_kaniko True
+        gcloud config set builds/kaniko_cache_ttl 480
+
+    # Deploy each changed pipeline
+    - name: Deploy changed pipelines
+      run: |
+        # Loop through each changed pipeline
+        for PIPELINE_NAME in ${{ env.CHANGED_PIPELINES }}; do
+          echo "Deploying pipeline: $PIPELINE_NAME"
+          
+          # Validate pipeline exists
+          if [ ! -d "pipelines/$PIPELINE_NAME" ]; then
+            echo "Pipeline directory 'pipelines/$PIPELINE_NAME' does not exist! Skipping."
+            continue
+          fi
+          if [ ! -f "pipelines/$PIPELINE_NAME/metadata.json" ]; then
+            echo "Metadata file for pipeline '$PIPELINE_NAME' not found! Skipping."
+            continue
+          fi
+          
+          # Set the PIPELINE_MODULE env var for the Dockerfile
+          echo "PIPELINE_MODULE=$PIPELINE_NAME" > pipeline.env
+          
+          # Build and push the Docker image
+          echo "Building Docker image for $PIPELINE_NAME..."
+          gcloud builds submit \
+            --tag europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipelines/$PIPELINE_NAME:latest \
+            --substitutions=_PIPELINE_NAME=$PIPELINE_NAME .
+          
+          # Build and upload Flex Template
+          echo "Creating Flex Template for $PIPELINE_NAME..."
+          gcloud dataflow flex-template build gs://totemic-dataflow-templates/templates/latest/$PIPELINE_NAME.json \
+            --image europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipelines/$PIPELINE_NAME:latest \
+            --sdk-language PYTHON \
+            --metadata-file pipelines/$PIPELINE_NAME/metadata.json
+          
+          echo "Pipeline $PIPELINE_NAME deployed successfully"
+        done
