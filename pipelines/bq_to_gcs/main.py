@@ -1,8 +1,30 @@
+"""
+Dataflow batch pipeline to extract data from BigQuery tables and store as parquet files in GCS.
+"""
 import argparse
 import json
 import logging
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
+import pyarrow as pa
+
+
+def bq_schema_to_arrow_schema(bq_schema):
+    """Convert BigQuery schema to Apache Arrow schema."""
+    type_mapping = {
+        'STRING': pa.string(),
+        'INTEGER': pa.int64(),
+        'FLOAT': pa.float64(),
+        'DATE': pa.date32(),
+    }
+    
+    fields = []
+    for field in bq_schema:
+        arrow_type = type_mapping.get(field['type'], pa.string())
+        is_nullable = field['mode'] == 'NULLABLE'
+        fields.append(pa.field(field['name'], arrow_type, nullable=is_nullable))
+    
+    return pa.schema(fields)
 
 
 class BigQueryToGCSOptions(PipelineOptions):
@@ -51,9 +73,7 @@ def run(argv=None):
                 data
                 | f"Write {source_table} to {destination_path}" >> beam.io.WriteToParquet(
                     file_path_prefix=f"{destination_path}/",
-                    schema=beam.io.gcp.bigquery_tools.parse_table_schema_from_json(
-                        json.dumps(table_config.get('schema', []))
-                    ),
+                    schema=bq_schema_to_arrow_schema(table_config.get('schema', [])),
                     file_name_suffix=".parquet"
                 )
             )
