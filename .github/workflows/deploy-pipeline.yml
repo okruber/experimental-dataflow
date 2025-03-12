@@ -1,4 +1,4 @@
-name: Deploy Dataflow Flex Template [TEST]
+name: Deploy Dataflow Flex Template
 
 on:
   push:
@@ -100,13 +100,11 @@ jobs:
             continue
           fi
           
-          # Set the PIPELINE_MODULE env var for the Dockerfile
-          echo "PIPELINE_MODULE=$PIPELINE_NAME" > pipeline.env
-          
-          # Build and push the Docker image
+          # Build and push the Docker image with pipeline module as build arg
           echo "Building Docker image for $PIPELINE_NAME..."
           gcloud builds submit \
             --tag europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipeline-images/$PIPELINE_NAME:latest \
+            --build-arg PIPELINE_MODULE=$PIPELINE_NAME .
           
           # Build and upload Flex Template
           echo "Creating Flex Template for $PIPELINE_NAME..."
