@@ -107,7 +107,6 @@ jobs:
           echo "Building Docker image for $PIPELINE_NAME..."
           gcloud builds submit \
             --tag europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipelines/$PIPELINE_NAME:latest \
-            --substitutions=_PIPELINE_NAME=$PIPELINE_NAME .
           
           # Build and upload Flex Template
           echo "Creating Flex Template for $PIPELINE_NAME..."
