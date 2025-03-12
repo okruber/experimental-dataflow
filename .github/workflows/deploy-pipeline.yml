@@ -109,7 +109,7 @@ jobs:
           # Build and upload Flex Template
           echo "Creating Flex Template for $PIPELINE_NAME..."
           gcloud dataflow flex-template build gs://totemic-dataflow-templates/templates/latest/$PIPELINE_NAME.json \
-            --image europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipelines/$PIPELINE_NAME:latest \
+            --image europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipeline-images/$PIPELINE_NAME:latest \
             --sdk-language PYTHON \
             --metadata-file pipelines/$PIPELINE_NAME/metadata.json
           
