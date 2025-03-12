@@ -4,9 +4,11 @@ Dataflow batch pipeline to extract data from BigQuery tables and store as parque
 import argparse
 import json
 import logging
+import os
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 import pyarrow as pa
+from apache_beam.io.gcp.gcsio import GcsIO
 
 
 def bq_schema_to_arrow_schema(bq_schema):
@@ -33,8 +35,21 @@ class BigQueryToGCSOptions(PipelineOptions):
         parser.add_argument(
             '--config_path',
             required=True,
-            help='Path to the configuration file'
+            help='Path to the configuration file (local path or GCS URI starting with gs://)'
         )
+
+
+def read_config(config_path):
+    """Read configuration from either local file or GCS."""
+    if config_path.startswith('gs://'):
+        # Read from GCS
+        gcs_client = GcsIO()
+        with gcs_client.open(config_path) as f:
+            return json.loads(f.read().decode('utf-8'))
+    else:
+        # Read from local file
+        with open(config_path, 'r') as config_file:
+            return json.load(config_file)
 
 
 def run(argv=None):
@@ -48,8 +63,8 @@ def run(argv=None):
     # Get the configuration file path from options
     options = pipeline_options.view_as(BigQueryToGCSOptions)
     
-    with open(options.config_path, 'r') as config_file:
-        config = json.load(config_file)
+    # Read configuration from local file or GCS
+    config = read_config(options.config_path)
     
     # Start the pipeline
     with beam.Pipeline(options=pipeline_options) as pipeline:
