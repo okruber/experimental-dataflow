@@ -1,12 +1,19 @@
 Dockerfile
 README.md
+cloudbuild.yaml
 pipelines
 requirements.txt
 setup.py
 structure.txt
 
 ./pipelines:
+bq_to_gcs
 solita-beam-demo
+
+./pipelines/bq_to_gcs:
+__init__.py
+main.py
+metadata.json
 
 ./pipelines/solita-beam-demo:
 __init__.py

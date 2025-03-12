@@ -1,0 +1,45 @@
+{
+    "name": "bigquery_to_gcs",
+    "description": "A pipeline to extract data from BigQuery tables and store as parquet files in GCS",
+    "parameters": [
+      {
+        "name": "config_path",
+        "label": "Configuration file path",
+        "helpText": "GCS path to the configuration file (gs://bucket-name/path/to/config.json)",
+        "isOptional": false,
+        "regexes": [
+          "^gs://[a-zA-Z0-9_.-]+/.*$"
+        ]
+      },
+      {
+        "name": "project",
+        "label": "Project ID",
+        "helpText": "The Google Cloud project ID to run the pipeline in",
+        "isOptional": true
+      },
+      {
+        "name": "region",
+        "label": "Region",
+        "helpText": "The Google Cloud region to run the pipeline in",
+        "isOptional": true
+      },
+      {
+        "name": "temp_location",
+        "label": "Temporary location",
+        "helpText": "GCS path for temporary files",
+        "isOptional": true,
+        "regexes": [
+          "^gs://[a-zA-Z0-9_.-]+/.*$"
+        ]
+      },
+      {
+        "name": "staging_location",
+        "label": "Staging location",
+        "helpText": "GCS path for staging files",
+        "isOptional": true,
+        "regexes": [
+          "^gs://[a-zA-Z0-9_.-]+/.*$"
+        ]
+      }
+    ]
+  }

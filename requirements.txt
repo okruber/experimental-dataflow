@@ -1,1 +1,2 @@
 apache-beam[gcp]==2.62.0
+pyarrow==16.0.0
