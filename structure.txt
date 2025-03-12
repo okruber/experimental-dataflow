@@ -1,0 +1,15 @@
+Dockerfile
+README.md
+pipelines
+requirements.txt
+setup.py
+structure.txt
+
+./pipelines:
+solita-beam-demo
+
+./pipelines/solita-beam-demo:
+__init__.py
+important_file_20250220.txt
+main.py
+metadata.json

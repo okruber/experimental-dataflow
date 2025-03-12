@@ -9,20 +9,17 @@ WORKDIR ${WORKDIR}
 # Copy all files
 COPY . ${WORKDIR}/
 
-# Read pipeline module from environment file (created during build)
-RUN if [ -f pipeline.env ]; then \
-    export $(cat pipeline.env | xargs); \
-    echo "Building pipeline: $PIPELINE_MODULE"; \
-    else \
-    echo "No pipeline.env found, unable to determine pipeline module"; \
+# Use ARG to get the pipeline module name (passed during build)
+ARG PIPELINE_MODULE
+RUN if [ -z "$PIPELINE_MODULE" ]; then \
+    echo "No PIPELINE_MODULE specified, unable to determine pipeline module"; \
     exit 1; \
-    fi && \
-    echo "export PIPELINE_MODULE=$PIPELINE_MODULE" >> /etc/profile.d/pipeline.sh
-
-# Set the pipeline module as an environment variable
-ENV PIPELINE_MODULE=${PIPELINE_MODULE}
+    else \
+    echo "Building pipeline: $PIPELINE_MODULE"; \
+    fi
 
 # Configure the launcher to use the correct pipeline file
+ENV PIPELINE_MODULE=${PIPELINE_MODULE}
 ENV FLEX_TEMPLATE_PYTHON_PY_FILE=${WORKDIR}/pipelines/${PIPELINE_MODULE}/main.py
 ENV FLEX_TEMPLATE_PYTHON_SETUP_FILE=${WORKDIR}/setup.py
 
