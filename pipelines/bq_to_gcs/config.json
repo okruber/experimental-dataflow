@@ -50,6 +50,42 @@
             "type": "INTEGER"
           }
         ]
+      },
+      {
+        "source_table": "chocolate_sales",
+        "destination_path": "gs://totemic-bucket-raw/solita_beam_demo/chocolate_sales",
+        "schema": [
+          {
+            "name": "Sales Person",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "Country",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "Product",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "Date",
+            "mode": "NULLABLE",
+            "type": "DATE"
+          },
+          {
+            "name": "Amount",
+            "mode": "NULLABLE",
+            "type": "INTEGER"
+          },
+          {
+            "name": "Boxes Shipped",
+            "mode": "NULLABLE",
+            "type": "INTEGER"
+          }
+        ]
       }
     ]
   }
