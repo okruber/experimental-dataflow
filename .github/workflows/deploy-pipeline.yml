@@ -100,6 +100,12 @@ jobs:
             continue
           fi
           
+          # Upload config file to GCS if it exists
+          if [ -f "pipelines/$PIPELINE_NAME/config.json" ]; then
+            echo "Uploading config file for $PIPELINE_NAME to GCS..."
+            gsutil cp pipelines/$PIPELINE_NAME/config.json gs://totemic-dataflow-templates/configs/$PIPELINE_NAME/config.json
+          fi
+          
           # Build and push the Docker image using cloudbuild.yaml
           echo "Building Docker image for $PIPELINE_NAME..."
           gcloud builds submit \

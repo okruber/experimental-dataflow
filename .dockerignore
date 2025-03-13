@@ -1,9 +1,8 @@
 *
 !*.py
-!pipeline/
-!solita-beam-demo-metadata
-!tests
+!pipelines/
+!tests/
 !pyproject.toml
 !setup.py
-!README.rst
+!README.md
 !requirements.txt

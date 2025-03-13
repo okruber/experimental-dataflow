@@ -1,13 +1,14 @@
-import setuptools
+from setuptools import setup, find_packages
 
-setuptools.setup(
-    name='solita-beam-demo',
-    version='1.0.0',  # Changed to explicit three-part version
-    install_requires=[],
-    packages=setuptools.find_packages(),
-    include_package_data=True,
-
-    # warnings suppressors
-    description='Solita Beam Demo',
-    author='OK',
+setup(
+    name='dataflow-pipelines',
+    version='0.1',
+    description='Dataflow Pipelines for Testing',
+    author='Olle Kruber',
+    packages=find_packages(),
+    install_requires=[
+        'apache-beam[gcp]==2.62.0',
+        'pyarrow==16.0.0',
+        'pandas==2.2.0', # ??
+    ],
 )

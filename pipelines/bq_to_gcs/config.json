@@ -1,0 +1,55 @@
+{
+    "tables": [
+      {
+        "source_table": "solita_beam_demo.central_park_weather",
+        "destination_path": "gs://totemic-bucket-raw/solita_beam_demo/central_park_weather",
+        "schema": [
+          {
+            "name": "STATION",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "NAME",
+            "mode": "NULLABLE",
+            "type": "STRING"
+          },
+          {
+            "name": "DATE",
+            "mode": "NULLABLE",
+            "type": "DATE"
+          },
+          {
+            "name": "AWND",
+            "mode": "NULLABLE",
+            "type": "FLOAT"
+          },
+          {
+            "name": "PRCP",
+            "mode": "NULLABLE",
+            "type": "FLOAT"
+          },
+          {
+            "name": "SNOW",
+            "mode": "NULLABLE",
+            "type": "FLOAT"
+          },
+          {
+            "name": "SNWD",
+            "mode": "NULLABLE",
+            "type": "FLOAT"
+          },
+          {
+            "name": "TMAX",
+            "mode": "NULLABLE",
+            "type": "INTEGER"
+          },
+          {
+            "name": "TMIN",
+            "mode": "NULLABLE",
+            "type": "INTEGER"
+          }
+        ]
+      }
+    ]
+  }
