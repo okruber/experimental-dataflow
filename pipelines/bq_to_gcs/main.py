@@ -9,6 +9,7 @@ import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 import pyarrow as pa
 from apache_beam.io.gcp.gcsio import GcsIO
+from datetime import datetime
 
 
 def bq_schema_to_arrow_schema(bq_schema):
@@ -66,13 +67,21 @@ def run(argv=None):
     # Read configuration from local file or GCS
     config = read_config(options.config_path)
     
+    # Generate timestamp for folder structure with underscore between date and time
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    
     # Start the pipeline
     with beam.Pipeline(options=pipeline_options) as pipeline:
         for table_config in config['tables']:
             source_table = table_config['source_table']
             destination_path = table_config['destination_path']
             
-            logging.info(f"Processing table: {source_table} to {destination_path}")
+            # Extract table name for folder structure
+            table_name = source_table.split('.')[-1]
+            
+            output_path = os.path.join(destination_path, timestamp)
+            
+            logging.info(f"Processing table: {source_table} to {output_path}")
             
             # Read from BigQuery
             data = (
@@ -86,8 +95,8 @@ def run(argv=None):
             # Write to GCS as parquet
             (
                 data
-                | f"Write {source_table} to {destination_path}" >> beam.io.WriteToParquet(
-                    file_path_prefix=f"{destination_path}/",
+                | f"Write {source_table} to {output_path}" >> beam.io.WriteToParquet(
+                    file_path_prefix=f"{output_path}/",
                     schema=bq_schema_to_arrow_schema(table_config.get('schema', [])),
                     file_name_suffix=".parquet"
                 )

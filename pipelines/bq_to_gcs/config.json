@@ -89,7 +89,7 @@
       },
       {
         "source_table": "solita_beam_demo.yelp_database",
-        "destination_path": "gs://totemic-bucket-raw/solita_beam_demo/yelp",
+        "destination_path": "gs://totemic-bucket-raw/solita_beam_demo/yelp_database",
         "schema": [
           {
             "name": "ID",
