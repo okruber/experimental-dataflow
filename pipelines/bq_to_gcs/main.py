@@ -98,7 +98,8 @@ def run(argv=None):
                 | f"Write {source_table} to {output_path}" >> beam.io.WriteToParquet(
                     file_path_prefix=f"{output_path}/",
                     schema=bq_schema_to_arrow_schema(table_config.get('schema', [])),
-                    file_name_suffix=".parquet"
+                    file_name_suffix=".parquet",
+                    record_batch_size=10000
                 )
             )
 
