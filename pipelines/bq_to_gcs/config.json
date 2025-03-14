@@ -162,22 +162,6 @@
             "type": "STRING"
           }
         ]
-      },
-      {
-        "source_table": "solita_beam_demo.transactions",
-        "destination_path": "gs://totemic-bucket-raw/solita_beam_demo/transactions",
-        "schema": [
-          {
-            "name": "date",
-            "mode": "NULLABLE",
-            "type": "DATE"
-          },
-          {
-            "name": "amount",
-            "mode": "NULLABLE",
-            "type": "INTEGER"
-          }
-        ]
       }
     ]
 }
