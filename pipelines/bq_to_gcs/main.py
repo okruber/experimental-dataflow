@@ -53,6 +53,53 @@ def read_config(config_path):
             return json.load(config_file)
 
 
+def process_table(table_config, timestamp_info):
+    """Process a single table and return a PTransform."""
+    year, month, day, timestamp_suffix = timestamp_info
+    
+    source_table = table_config['source_table']
+    destination_path = table_config['destination_path']
+    
+    # Extract dataset and table name for folder structure
+    dataset_name = source_table.split('.')[-2]
+    table_name = source_table.split('.')[-1]
+    
+    # Create partitioned folder structure
+    partitioned_path = os.path.join(
+        destination_path,
+        f"year={year}",
+        f"month={month}",
+        f"day={day}"
+    )
+    
+    # Create file name prefix with timestamp
+    file_prefix = f"{partitioned_path}/{table_name}_{timestamp_suffix}"
+    
+    class ProcessTableFn(beam.PTransform):
+        def expand(self, pcoll):
+            # Read from BigQuery
+            data = (
+                pcoll.pipeline
+                | f"Read {source_table}" >> beam.io.ReadFromBigQuery(
+                    table=source_table,
+                    use_standard_sql=True
+                )
+            )
+            
+            # Write to GCS as parquet
+            return (
+                data
+                | f"Write {source_table} to {file_prefix}" >> beam.io.WriteToParquet(
+                    file_path_prefix=file_prefix,
+                    schema=bq_schema_to_arrow_schema(table_config.get('schema', [])),
+                    file_name_suffix=".parquet",
+                    record_batch_size=10000
+                )
+            )
+    
+    return ProcessTableFn()
+
+
 def run(argv=None):
     """Main entry point for the pipeline."""
     parser = argparse.ArgumentParser()
@@ -73,50 +120,17 @@ def run(argv=None):
     month = now.strftime('%m')
     day = now.strftime('%d')
     timestamp_suffix = now.strftime('%Y%m%d_%H%M%S')
+    timestamp_info = (year, month, day, timestamp_suffix)
     
     # Start the pipeline
     with beam.Pipeline(options=pipeline_options) as pipeline:
-        for table_config in config['tables']:
+        # Process all tables in parallel
+        for i, table_config in enumerate(config['tables']):
             source_table = table_config['source_table']
-            destination_path = table_config['destination_path']
+            logging.info(f"Setting up processing for table: {source_table}")
             
-            # Extract dataset and table name for folder structure
-            dataset_name = source_table.split('.')[-2]
-            table_name = source_table.split('.')[-1]
-            
-            # Create partitioned folder structure:
-            # destination_path/year=yyyy/month=mm/day=dd/
-            partitioned_path = os.path.join(
-                destination_path,
-                f"year={year}",
-                f"month={month}",
-                f"day={day}"
-            )
-            
-            # Create file name prefix with timestamp
-            file_prefix = f"{partitioned_path}/{table_name}_{timestamp_suffix}"
-            
-            logging.info(f"Processing table: {source_table} to {file_prefix}")
-            
-            # Read from BigQuery
-            data = (
-                pipeline
-                | f"Read {source_table}" >> beam.io.ReadFromBigQuery(
-                    table=source_table,
-                    use_standard_sql=True
-                )
-            )
-            
-            # Write to GCS as parquet
-            (
-                data
-                | f"Write {source_table} to {file_prefix}" >> beam.io.WriteToParquet(
-                    file_path_prefix=file_prefix,
-                    schema=bq_schema_to_arrow_schema(table_config.get('schema', [])),
-                    file_name_suffix=".parquet",
-                    record_batch_size=10000
-                )
-            )
+            # Create a separate branch for each table
+            _ = pipeline | f"Process Table {i}" >> process_table(table_config, timestamp_info)
 
 
 if __name__ == '__main__':
