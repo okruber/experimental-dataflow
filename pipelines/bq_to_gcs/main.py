@@ -67,8 +67,12 @@ def run(argv=None):
     # Read configuration from local file or GCS
     config = read_config(options.config_path)
     
-    # Generate timestamp for folder structure with underscore between date and time
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    # Generate timestamp components for folder structure
+    now = datetime.now()
+    year = now.strftime('%Y')
+    month = now.strftime('%m')
+    day = now.strftime('%d')
+    timestamp_suffix = now.strftime('%Y%m%d_%H%M%S')
     
     # Start the pipeline
     with beam.Pipeline(options=pipeline_options) as pipeline:
@@ -76,12 +80,23 @@ def run(argv=None):
             source_table = table_config['source_table']
             destination_path = table_config['destination_path']
             
-            # Extract table name for folder structure
+            # Extract dataset and table name for folder structure
+            dataset_name = source_table.split('.')[-2]
             table_name = source_table.split('.')[-1]
             
-            output_path = os.path.join(destination_path, timestamp)
+            # Create partitioned folder structure:
+            # destination_path/year=yyyy/month=mm/day=dd/
+            partitioned_path = os.path.join(
+                destination_path,
+                f"year={year}",
+                f"month={month}",
+                f"day={day}"
+            )
             
-            logging.info(f"Processing table: {source_table} to {output_path}")
+            # Create file name prefix with timestamp
+            file_prefix = f"{partitioned_path}/{table_name}_{timestamp_suffix}"
+            
+            logging.info(f"Processing table: {source_table} to {file_prefix}")
             
             # Read from BigQuery
             data = (
@@ -95,8 +110,8 @@ def run(argv=None):
             # Write to GCS as parquet
             (
                 data
-                | f"Write {source_table} to {output_path}" >> beam.io.WriteToParquet(
-                    file_path_prefix=f"{output_path}/",
+                | f"Write {source_table} to {file_prefix}" >> beam.io.WriteToParquet(
+                    file_path_prefix=file_prefix,
                     schema=bq_schema_to_arrow_schema(table_config.get('schema', [])),
                     file_name_suffix=".parquet",
                     record_batch_size=10000
