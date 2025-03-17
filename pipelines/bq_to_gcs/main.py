@@ -82,7 +82,8 @@ def process_table(table_config, timestamp_info):
                 pcoll.pipeline
                 | f"Read {source_table}" >> beam.io.ReadFromBigQuery(
                     table=source_table,
-                    use_standard_sql=True
+                    method='DIRECT_READ',
+                    validate=True
                 )
             )
             
