@@ -153,7 +153,6 @@ def run(argv=None):
     # Parse pipeline options
     pipeline_options = BigQueryToGCSOptions(pipeline_args)
     
-    # Create and run pipeline
     pipeline = BigQueryToGCSPipeline(pipeline_options)
     return pipeline.run()
 
