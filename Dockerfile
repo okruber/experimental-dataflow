@@ -5,11 +5,6 @@ FROM gcr.io/dataflow-templates-base/python312-template-launcher-base:${TAG}
 ARG WORKDIR=/opt/dataflow
 WORKDIR ${WORKDIR}
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_NO_DEPS=True
-
 ARG PIPELINE_MODULE
 RUN if [ -z "$PIPELINE_MODULE" ]; then \
     echo "No PIPELINE_MODULE specified"; \
@@ -24,11 +19,9 @@ ENV PIPELINE_MODULE=${PIPELINE_MODULE} \
 COPY . ${WORKDIR}/
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        $(grep -v "#" ${WORKDIR}/apt-packages.txt 2>/dev/null || echo "") && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir 'apache-beam[gcp]==2.62.0' && \
     pip install --no-cache-dir -U -r ${WORKDIR}/requirements.txt && \
     pip install --no-cache-dir -e .
+
+ENV PIP_NO_DEPS=True
