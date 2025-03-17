@@ -86,6 +86,9 @@ jobs:
     # Deploy each changed pipeline
     - name: Deploy changed pipelines
       run: |
+        # Generate timestamp-based tag
+        TIMESTAMP=$(date -u '+%Y%m%d_%H%M%S')
+        
         # Loop through each changed pipeline
         for PIPELINE_NAME in ${{ env.CHANGED_PIPELINES }}; do
           echo "Deploying pipeline: $PIPELINE_NAME"
@@ -107,15 +110,15 @@ jobs:
           fi
           
           # Build and push the Docker image using cloudbuild.yaml
-          echo "Building Docker image for $PIPELINE_NAME..."
+          echo "Building Docker image for $PIPELINE_NAME with tag: $TIMESTAMP..."
           gcloud builds submit \
             --config cloudbuild.yaml \
-            --substitutions=_PIPELINE_NAME=$PIPELINE_NAME,_PIPELINE_MODULE=$PIPELINE_NAME .
+            --substitutions=_PIPELINE_NAME=$PIPELINE_NAME,_PIPELINE_MODULE=$PIPELINE_NAME,_IMAGE_TAG=$TIMESTAMP .
           
           # Build and upload Flex Template
           echo "Creating Flex Template for $PIPELINE_NAME..."
           gcloud dataflow flex-template build gs://totemic-dataflow-templates/templates/latest/$PIPELINE_NAME.json \
-            --image europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipeline-images/$PIPELINE_NAME:latest \
+            --image europe-north1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/dataflow-pipeline-images/$PIPELINE_NAME:$TIMESTAMP \
             --sdk-language PYTHON \
             --metadata-file pipelines/$PIPELINE_NAME/metadata.json
           

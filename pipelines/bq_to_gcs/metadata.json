@@ -5,7 +5,7 @@
       {
         "name": "config_path",
         "label": "Configuration file path",
-        "helpText": "GCS path to the configuration file (gs://bucket-name/path/to/config.json)",
+        "helpText": "GCS path to the configuration file (gs:totemic-dataflow-templates/configs/)",
         "isOptional": false,
         "regexes": [
           "^gs://[a-zA-Z0-9_.-]+/.*$"
