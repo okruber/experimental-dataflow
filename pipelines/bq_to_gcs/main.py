@@ -5,11 +5,12 @@ import argparse
 import json
 import logging
 import os
+from datetime import datetime
+
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
-import pyarrow as pa
 from apache_beam.io.gcp.gcsio import GcsIO
-from datetime import datetime
+import pyarrow as pa
 
 
 def bq_schema_to_arrow_schema(bq_schema):
@@ -53,6 +54,9 @@ def read_config(config_path):
             return json.load(config_file)
 
 
+# FusionBreak class removed as we'll use Reshuffle instead
+
+
 def process_table(table_config, timestamp_info):
     """Process a single table and return a PTransform."""
     year, month, day, timestamp_suffix = timestamp_info
@@ -86,14 +90,20 @@ def process_table(table_config, timestamp_info):
                 )
             )
             
+            # Add a fusion break to improve parallelism between read and write
+            data_with_break = (
+                data
+                | f"Reshuffle {source_table}" >> beam.Reshuffle()
+            )
+            
             # Write to GCS as parquet
             return (
-                data
+                data_with_break
                 | f"Write {source_table} to {file_prefix}" >> beam.io.WriteToParquet(
                     file_path_prefix=file_prefix,
                     schema=bq_schema_to_arrow_schema(table_config.get('schema', [])),
                     file_name_suffix=".parquet",
-                    record_batch_size=10000
+                    record_batch_size=50000
                 )
             )
     
@@ -124,7 +134,8 @@ def run(argv=None):
     
     # Start the pipeline
     with beam.Pipeline(options=pipeline_options) as pipeline:
-        # Process all tables in parallel
+        # The pipeline already processes all tables in parallel
+        # Each table is a separate transform applied to the pipeline
         for i, table_config in enumerate(config['tables']):
             source_table = table_config['source_table']
             logging.info(f"Setting up processing for table: {source_table}")
