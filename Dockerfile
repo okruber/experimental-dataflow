@@ -28,3 +28,5 @@ RUN apt-get update && \
 
 # Set this if using Beam 2.37.0 or earlier SDK to speed up job submission :(
 ENV PIP_NO_DEPS=True
+
+ENTRYPOINT ["/opt/google/dataflow/python_template_launcher"]

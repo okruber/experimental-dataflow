@@ -1,10 +1,11 @@
-from setuptools import setup, find_packages
+import setuptools
 
-setup(
-    name='dataflow-pipelines-test',
-    install_requires=[
+setuptools.setup(
+  name='solita-dataflow-pipelines',
+  version='0.1',
+  install_requires=[
         'apache-beam[gcp]==2.62.0',
         'pyarrow==16.0.0'
     ],
-    packages=find_packages()
+  packages=setuptools.find_packages(),
 )
