@@ -1,0 +1,26 @@
+{
+    "input_path": "gs://totemic-bucket-raw/covid_19_data.csv",
+    "output_path": "gs://totemic-bucket-raw/solita_beam_demo/covid_19_data",
+    "output_file_prefix": "covid_19_data",
+    "skip_header_lines": 1,
+    "schema": [
+        {"name": "SNo", "type": "int64"},
+        {"name": "ObservationDate", "type": "string"},
+        {"name": "Province/State", "type": "string"},
+        {"name": "Country/Region", "type": "string"},
+        {"name": "LastUpdate", "type": "string"},
+        {"name": "Confirmed", "type": "float"},
+        {"name": "Deaths", "type": "float"},
+        {"name": "Recovered", "type": "float"}
+    ],
+    "csv_field_mapping": {
+        "0": {"field": "SNo", "type": "int", "default": 0},
+        "1": {"field": "ObservationDate", "type": "string", "default": ""},
+        "2": {"field": "Province/State", "type": "string", "default": ""},
+        "3": {"field": "Country/Region", "type": "string", "default": ""},
+        "4": {"field": "LastUpdate", "type": "string", "default": ""},
+        "5": {"field": "Confirmed", "type": "float", "default": 0},
+        "6": {"field": "Deaths", "type": "float", "default": 0},
+        "7": {"field": "Recovered", "type": "float", "default": 0}
+    }
+}

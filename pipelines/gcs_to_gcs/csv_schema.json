@@ -1,0 +1,10 @@
+"schema": [
+        {"name": "SNo", "type": "int64"},
+        {"name": "ObservationDate", "type": "string"},
+        {"name": "Province/State", "type": "string"},
+        {"name": "Country/Region", "type": "string"},
+        {"name": "LastUpdate", "type": "string"},
+        {"name": "Confirmed", "type": "float"},
+        {"name": "Deaths", "type": "float"},
+        {"name": "Recovered", "type": "float"}
+    ],
