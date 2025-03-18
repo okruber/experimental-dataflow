@@ -2,19 +2,29 @@
 Dataflow batch pipeline to extract data from BigQuery tables and store as parquet files in GCS.
 """
 import argparse
-import json
 import logging
 import os
-from datetime import datetime
+from typing import Dict, List, Tuple, Iterator, Optional, NamedTuple
 
 import apache_beam as beam
 import pyarrow as pa
-from apache_beam.io.gcp.gcsio import GcsIO
 from apache_beam.options.pipeline_options import PipelineOptions
 
+from pipelines.common.base_pipeline import BasePipeline
 
-def bq_schema_to_arrow_schema(bq_schema):
-    """Convert BigQuery schema to Apache Arrow schema."""
+
+def bq_schema_to_arrow_schema(bq_schema: List[Dict]) -> pa.Schema:
+    """Convert BigQuery schema to Apache Arrow schema.
+    
+    Args:
+        bq_schema: List of BigQuery schema field definitions
+        
+    Returns:
+        Apache Arrow schema
+        
+    Raises:
+        ValueError: If schema conversion fails
+    """
     type_mapping = {
         'STRING': pa.string(),
         'INTEGER': pa.int64(),
@@ -31,8 +41,18 @@ def bq_schema_to_arrow_schema(bq_schema):
         
         return pa.schema(fields)
     except Exception as e:
-        logging.error(f"Error converting BigQuery schema to Arrow schema: {e}")
-        raise
+        error_msg = f"Error converting BigQuery schema to Arrow schema: {e}"
+        logging.error(error_msg)
+        raise ValueError(error_msg) from e
+
+
+class TableConfig(NamedTuple):
+    """Named tuple for table configuration."""
+    source_table: str
+    destination_path: str
+    file_prefix: str
+    arrow_schema: pa.Schema
+    table_name: str
 
 
 class BigQueryToGCSOptions(PipelineOptions):
@@ -45,129 +65,120 @@ class BigQueryToGCSOptions(PipelineOptions):
         )
 
 
-def read_config(config_path):
-    """Read configuration from either local file or GCS."""
-    try:
-        if config_path.startswith('gs://'):
-            # Read from GCS
-            gcs_client = GcsIO()
-            with gcs_client.open(config_path) as f:
-                return json.loads(f.read().decode('utf-8'))
-        else:
-            # Read from local file
-            with open(config_path, 'r') as config_file:
-                return json.load(config_file)
-    except Exception as e:
-        logging.error(f"Error reading configuration file {config_path}: {e}")
-        raise
+class BigQueryToGCSPipeline(BasePipeline):
+    """Pipeline to extract data from BigQuery tables and store as parquet files in GCS."""
 
-class ProcessTableFn(beam.PTransform):
-    """PTransform to process a single table, reading from BigQuery and writing to GCS as parquet."""
-    
-    def __init__(self, source_table, file_prefix, arrow_schema):
-        super().__init__()
-        self.source_table = source_table
-        self.file_prefix = file_prefix
-        self.arrow_schema = arrow_schema
-    
-    def expand(self, pcoll):
-        """Define the transform operations."""
-        data = (
-            pcoll.pipeline
-            | f"Read {self.source_table}" >> beam.io.ReadFromBigQuery(
-                table=self.source_table
+    def prepare_table_config(
+        self, 
+        table_config: Dict,
+        timestamp_info: Tuple[str, str, str, str]
+    ) -> TableConfig:
+        """Prepare table configuration with computed values.
+        
+        Args:
+            table_config: Raw table configuration from config file
+            timestamp_info: Tuple of (year, month, day, timestamp_suffix)
+            
+        Returns:
+            Prepared TableConfig object
+            
+        Raises:
+            ValueError: If table configuration is invalid
+        """
+        try:
+            source_table = table_config['source_table']
+            destination_path = table_config['destination_path']
+            
+            # Get partitioned path
+            year, month, day, timestamp_suffix = timestamp_info
+            partitioned_path = self.get_partitioned_path(destination_path, timestamp_info)
+            
+            # Extract table name for file prefix
+            table_name = source_table.split('.')[-1]
+            
+            # Create file name prefix with timestamp
+            file_prefix = f"{partitioned_path}/{table_name}_{timestamp_suffix}"
+            
+            # Convert schema
+            arrow_schema = bq_schema_to_arrow_schema(table_config.get('schema', []))
+            
+            return TableConfig(
+                source_table=source_table,
+                destination_path=destination_path,
+                file_prefix=file_prefix,
+                arrow_schema=arrow_schema,
+                table_name=table_name
             )
-        )
-        
-        return (
-            data
-            | f"Write {self.source_table} to {self.file_prefix}" >> beam.io.WriteToParquet(
-                file_path_prefix=self.file_prefix,
-                schema=self.arrow_schema,
-                file_name_suffix=".parquet",
-                record_batch_size=50000
-            )
-        )
+        except Exception as e:
+            error_msg = f"Error preparing table config for {table_config.get('source_table', 'unknown')}: {e}"
+            logging.error(error_msg)
+            raise ValueError(error_msg) from e
 
-
-def create_process_table_transform(table_config, timestamp_info):
-    """
-    Create a ProcessTableFn transform for the given table configuration.
-
-    """
-    try:
-        year, month, day, timestamp_suffix = timestamp_info
+    def run(self) -> int:
+        """Main entry point for the pipeline.
         
-        source_table = table_config['source_table']
-        destination_path = table_config['destination_path']
-        
-        # Extract dataset and table name for folder structure
-        dataset_name = source_table.split('.')[-2]
-        table_name = source_table.split('.')[-1]
-        
-        # Create partitioned folder structure
-        partitioned_path = os.path.join(
-            destination_path,
-            f"year={year}",
-            f"month={month}",
-            f"day={day}"
-        )
-        
-        # Create file name prefix with timestamp
-        file_prefix = f"{partitioned_path}/{table_name}_{timestamp_suffix}"
-        
-        # Convert schema once and pass to the transform
-        arrow_schema = bq_schema_to_arrow_schema(table_config.get('schema', []))
-        
-        return ProcessTableFn(source_table, file_prefix, arrow_schema)
-    except Exception as e:
-        logging.error(f"Error creating process table transform for {table_config.get('source_table', 'unknown')}: {e}")
-        raise
-
-
-def generate_timestamp_info():
-    """Generate timestamp components for folder structure."""
-    now = datetime.now()
-    year = now.strftime('%Y')
-    month = now.strftime('%m')
-    day = now.strftime('%d')
-    timestamp_suffix = now.strftime('%Y%m%d_%H%M%S')
-    return (year, month, day, timestamp_suffix)
+        Returns:
+            0 for success, non-zero for failure.
+        """
+        try:
+            # Get the configuration file path from options
+            options = self.pipeline_options.view_as(BigQueryToGCSOptions)
+            
+            # Read configuration using base class method
+            config = self.read_config(options.config_path)
+            
+            # Generate timestamp components using base class method
+            timestamp_info = self.generate_timestamp_info()
+            
+            # Start the pipeline
+            with beam.Pipeline(options=self.pipeline_options) as pipeline:
+                # Process all tables in parallel by creating sub-pipelines for each table
+                for table_entry in config['tables']:
+                    try:
+                        # Prepare the table configuration
+                        table_config = self.prepare_table_config(table_entry, timestamp_info)
+                        logging.info(f"Processing table: {table_config.table_name}")
+                        
+                        # Create a reading transform for the table
+                        read_data = (
+                            pipeline 
+                            | f"Read {table_config.table_name}" >> beam.io.ReadFromBigQuery(
+                                table=table_config.source_table
+                            )
+                        )
+                        
+                        # Create a writing transform for the table
+                        _ = (
+                            read_data
+                            | f"Write {table_config.table_name} to GCS" >> beam.io.WriteToParquet(
+                                file_path_prefix=table_config.file_prefix,
+                                schema=table_config.arrow_schema,
+                                file_name_suffix=".parquet",
+                                record_batch_size=50000
+                            )
+                        )
+                        
+                        logging.info(f"Set up pipeline for table: {table_config.table_name}")
+                    
+                    except Exception as e:
+                        logging.error(f"Error setting up pipeline for table: {e}")
+            
+            return 0
+        except Exception as e:
+            logging.error(f"Pipeline failed: {e}")
+            return 1
 
 
 def run(argv=None):
-    """Main entry point for the pipeline."""
-    try:
-        parser = argparse.ArgumentParser()
-        known_args, pipeline_args = parser.parse_known_args(argv)
+    """Pipeline entry point."""
+    parser = argparse.ArgumentParser()
+    known_args, pipeline_args = parser.parse_known_args(argv)
 
-        # Parse pipeline options
-        pipeline_options = BigQueryToGCSOptions(pipeline_args)
-        
-        # Get the configuration file path from options
-        options = pipeline_options.view_as(BigQueryToGCSOptions)
-        
-        # Read configuration from local file or GCS
-        config = read_config(options.config_path)
-        
-        # Generate timestamp components for folder structure - done once at the beginning
-        timestamp_info = generate_timestamp_info()
-        
-        # Start the pipeline
-        with beam.Pipeline(options=pipeline_options) as pipeline:
-            # Process all tables in parallel
-            for i, table_config in enumerate(config['tables']):
-                source_table = table_config['source_table']
-                logging.info(f"Setting up processing for table: {source_table}")
-                
-                # Create a separate branch for each table
-                transform = create_process_table_transform(table_config, timestamp_info)
-                _ = pipeline | f"Process Table {i}" >> transform
-                
-        return 0
-    except Exception as e:
-        logging.error(f"Pipeline failed: {e}")
-        return 1
+    # Parse pipeline options
+    pipeline_options = BigQueryToGCSOptions(pipeline_args)
+    
+    pipeline = BigQueryToGCSPipeline(pipeline_options)
+    return pipeline.run()
 
 
 if __name__ == '__main__':
